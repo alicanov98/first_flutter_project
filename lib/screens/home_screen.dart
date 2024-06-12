@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:ornek_proje/models/product_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -8,82 +14,91 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _counter = 0;
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  ProductsModel? _products;
+  List<Product> _productsArr = [];
+
+  void _loadData() async {
+    final dataString = await rootBundle.loadString('assets/files/data.json');
+    final dataJson = jsonDecode(dataString);
+
+    _products = ProductsModel.fromJson(dataJson);
+    _productsArr = _products!.products;
+    setState(() {});
   }
 
-  void _resetCounter() {
-    setState(() {
-      _counter = 0;
-    });
+  void _filterData(int id) {
+    _productsArr = _products!.products
+        .where((itemsProduct) => itemsProduct.kategori == id)
+        .toList();
+    setState(() {});
+  }
+
+  void _resetData() {
+    _productsArr = _products!.products;
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    _loadData();
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF191919),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(alignment: Alignment.center, children: [
-              Image.asset('assets/images/zikirmatik.png', width: 300),
-              Positioned(
-                top: 46,
-                right: 78,
-                child: _counterText(),
-              ),
-              Positioned(
-                bottom: 30,
-                child: _incrementButton(),
-              ),
-              Positioned(
-                right: 76,
-                bottom: 114,
-                child: _resetButton(),
-              )
-            ]),
-          ],
-        ),
+        body: Center(
+            child: _products == null
+                ? const Text('Loading...')
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                          onPressed: _resetData,
+                          child: const Text('All Products')),
+                      _kategoriViwe(),
+                      _productView()
+                    ],
+                  )));
+  }
+
+  ListView _productView() {
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: _productsArr.length,
+      itemBuilder: (context, index) {
+        final Product item = _productsArr[index];
+        return ListTile(
+            leading: Image.network(
+              item.resim,
+              width: 50,
+              height: 100,
+              fit: BoxFit.cover,
+            ),
+            title: Text(item.isim));
+      },
+      separatorBuilder: (context, index) => const Divider(
+        height: 10,
       ),
     );
   }
 
-  GestureDetector _resetButton() {
-    return GestureDetector(
-      onTap: _resetCounter,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(60),
-        ),
-      ),
-    );
-  }
-
-  GestureDetector _incrementButton() {
-    return GestureDetector(
-      onTap: _incrementCounter,
-      child: Container(
-        width: 90,
-        height: 90,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(60)),
-      ),
-    );
-  }
-
-  Text _counterText() {
-    return Text(
-      '$_counter',
-      style: const TextStyle(
-        fontFamily: 'Digital7',
-        fontSize: 50,
-        color: Colors.white,
-      ),
+  Row _kategoriViwe() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(_products!.kategoriler.length, (index) {
+        final kategori = _products!.kategoriler[index];
+        return GestureDetector(
+          onTap: () => _filterData(kategori.id),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            margin: EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+                color: Colors.black12, borderRadius: BorderRadius.circular(10)),
+            child: Text(_products!.kategoriler[index].isim),
+          ),
+        );
+      }),
     );
   }
 }
